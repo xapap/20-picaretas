@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import sqlite3
 import hashlib
 from datetime import datetime, timedelta
@@ -158,7 +159,7 @@ def execute_mine(username):
     global_mined = c.fetchone()[0]
     
     base = calculate_reward(global_mined)
-    bonus_streak = min((new_streak - 1) * 0.01, 0.25) # até +25%
+    bonus_streak = min((new_streak - 1) * 0.01, 0.25)
     multiplier = 1.0 + bonus_streak
     reward_mined = round(base * multiplier, 2)
     
@@ -267,13 +268,11 @@ with tab_jogo:
             st.session_state.logged_user = None
             st.rerun()
             
-        m1, m2 = st.columns(2)
-        m1.metric("O teu Saldo", f"{balance:,.2f} 💎")
-        m2.metric("Sequência Diária", f"{streak} dias 🔥")
-        
-        # Validação 24 Horas
+        # Validação 24 Horas e contagem
         pode_minerar = True
+        segundos_restantes = 0
         tempo_str = ""
+        
         if last_mine_str:
             last_mine = datetime.fromisoformat(last_mine_str)
             proxima = last_mine + timedelta(hours=24)
@@ -281,9 +280,53 @@ with tab_jogo:
             if agora < proxima:
                 pode_minerar = False
                 restante = proxima - agora
-                h, r = divmod(int(restante.total_seconds()), 3600)
+                segundos_restantes = max(0, int(restante.total_seconds()))
+                h, r = divmod(segundos_restantes, 3600)
                 m, _ = divmod(r, 60)
                 tempo_str = f"{h}h {m}m"
+
+        # Métricas em 3 Colunas com Countdown ao Vivo
+        m1, m2, m3 = st.columns(3)
+        m1.metric("O teu Saldo", f"{balance:,.2f} 💎")
+        
+        # Correção do plural ("1 dia" vs "2 dias")
+        texto_dias = "dia" if streak == 1 else "dias"
+        m2.metric("Sequência Diária", f"{streak} {texto_dias} 🔥")
+        
+        with m3:
+            if pode_minerar:
+                st.metric("Próxima Picareta", "Disponível! ⚡")
+            else:
+                # Componente HTML/JS para contagem regressiva em direto segundo a segundo
+                countdown_html = f"""
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <div style="font-size: 14px; color: #808495; margin-bottom: 4px;">Próxima Picareta</div>
+                    <div id="countdown" style="font-size: 26px; font-weight: 700; color: #ff4b4b; line-height: 1.2;">
+                        Calculando...
+                    </div>
+                </div>
+                <script>
+                    let timeLeft = {segundos_restantes};
+                    function updateTimer() {{
+                        if (timeLeft <= 0) {{
+                            document.getElementById("countdown").innerHTML = "Disponível! ⚡";
+                            document.getElementById("countdown").style.color = "#09ab3b";
+                            return;
+                        }}
+                        const h = Math.floor(timeLeft / 3600);
+                        const m = Math.floor((timeLeft % 3600) / 60);
+                        const s = timeLeft % 60;
+                        const hStr = h > 0 ? h + "h " : "";
+                        const mStr = (m < 10 ? "0" + m : m) + "m ";
+                        const sStr = (s < 10 ? "0" + s : s) + "s";
+                        document.getElementById("countdown").innerHTML = "⏳ " + hStr + mStr + sStr;
+                        timeLeft--;
+                    }}
+                    updateTimer();
+                    setInterval(updateTimer, 1000);
+                </script>
+                """
+                components.html(countdown_html, height=75)
 
         recompensa_prox = calculate_reward(global_mined) * (1.0 + min(streak * 0.01, 0.25))
         st.write(f"Estimativa do próximo golpe: **+{recompensa_prox:.2f} fragmentos**")
