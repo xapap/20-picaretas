@@ -3,11 +3,12 @@ import sqlite3
 import hashlib
 from datetime import datetime, timedelta
 
+# Configuração da página
 st.set_page_config(page_title="20 Picaretas", page_icon="⛏️", layout="centered")
 
 # --- PARÂMETROS ECONÓMICOS ---
 TOTAL_CAP = 2100000.0   # Teto mundial: 2.1 Milhões
-CUSTO_PREMIO = 50000.0  # Meta para o Vale de 20€ / Fruta
+CUSTO_PREMIO = 50000.0  # Meta para o Vale de 20€ / Fruta (aprox. 400 visitas)
 BONUS_BOAS_VINDAS = 1000.0
 
 # --- SEGURANÇA ---
@@ -30,7 +31,7 @@ def init_db():
         )
     """)
     
-    # Auto-migração caso já existam tabelas anteriores
+    # Auto-migração caso existam tabelas de versões anteriores
     c.execute("PRAGMA table_info(users)")
     colunas = [col[1] for col in c.fetchall()]
     if "password_hash" not in colunas:
@@ -157,7 +158,7 @@ def execute_mine(username):
     global_mined = c.fetchone()[0]
     
     base = calculate_reward(global_mined)
-    bonus_streak = min((new_streak - 1) * 0.01, 0.25)
+    bonus_streak = min((new_streak - 1) * 0.01, 0.25) # até +25%
     multiplier = 1.0 + bonus_streak
     reward_mined = round(base * multiplier, 2)
     
@@ -229,6 +230,9 @@ with tab_jogo:
 
     if not st.session_state.logged_user:
         aba_log, aba_reg = st.tabs(["🔑 Entrar na Conta", "📝 Novo Mineiro"])
+        
+        # Nota de privacidade diretamente por baixo das abas
+        st.caption("🔒 Só precisamos de uma alcunha e uma palavra-passe — **não pedimos nem precisamos do teu e-mail**.")
         
         with aba_log:
             l_user = st.text_input("Alcunha:", key="log_u")
@@ -356,7 +360,7 @@ with tab_guia:
     st.subheader("🎯 As Regras de Ouro")
     st.markdown("""
     1. **1 Golpe a Cada 24 Horas:** Não adianta tentar carregar 50 vezes seguidas. A rocha precisa de 24 horas completas para arrefecer.
-    2. **A Reserva Fita de 2,1 Milhões:** Tal como o ouro ou o Bitcoin, os fragmentos do mundo são finitos. Quanto mais fragmentos forem minerados pela comunidade, mais difícil e raro se torna cada golpe.
+    2. **A Reserva Finita de 2,1 Milhões:** Tal como o ouro ou o Bitcoin, os fragmentos do mundo são finitos. Quanto mais fragmentos forem minerados pela comunidade, mais difícil e raro se torna cada golpe.
     3. **A Sequência de Fogo (Streak):** Cada dia seguido que voltas dá-te um bónus cumulativo (até +25%). Se passares mais de 48 horas sem cá vir, a sequência apaga-se e volta a 1.
     4. **O Bónus de Boas-Vindas:** Logo na tua primeira picareta, recebes de imediato **+1.000 Fragmentos** para arrancar na frente.
     """)
@@ -364,7 +368,7 @@ with tab_guia:
     st.subheader("🎁 O Prémio Final: O 'Vale de 20 Picaretas'")
     st.write("""
     Ao atingires a marca dos **50.000 Fragmentos**, o botão de resgate é desbloqueado e podes escolher:
-    * **Vale de Compras de 20€** numa loja à tua escolha (Pingo Doce, Continente, Amazon, etc.).
+    * **Vale de Compras de 20€** numa loja à tua escolha (Pingo Doce, Continente, Amazon, Fnac, etc.).
     * **1 Kg de Fruta Fresca à tua escolha** entregue diretamente.
     """)
     
